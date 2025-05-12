@@ -178,6 +178,9 @@ namespace DragDropClippedCanvas.Controls
                 double left = Canvas.GetLeft(_hoveredElement);
                 double top = Canvas.GetTop(_hoveredElement);
 
+                // Debug output for diagnostics
+                // Console.WriteLine($"Before: Left={left}, Top={top}, Width={currentWidth}, Height={currentHeight}");
+
                 // Calculate the center point of the element
                 double centerX = left + (currentWidth / 2);
                 double centerY = top + (currentHeight / 2);
@@ -200,7 +203,10 @@ namespace DragDropClippedCanvas.Controls
                 double newTop = centerY - (newHeight / 2);
 
                 // Check boundaries and adjust position and size if needed
-                AdjustSizeAndPositionForCanvas(ref newWidth, ref newHeight, ref newLeft, ref newTop);
+                AdjustSizeAndPositionForCanvas(ref newWidth, ref newHeight, ref newLeft, ref newTop, centerX, centerY);
+
+                // Debug output for diagnostics
+                // Console.WriteLine($"After: Left={newLeft}, Top={newTop}, Width={newWidth}, Height={newHeight}");
 
                 // Update element size and position
                 frameworkElement.Width = newWidth;
@@ -225,116 +231,87 @@ namespace DragDropClippedCanvas.Controls
         /// Adjusts the size and position of an element to ensure it stays within canvas boundaries
         /// while maintaining square aspect ratio
         /// </summary>
-        private void AdjustSizeAndPositionForCanvas(ref double width, ref double height, ref double left, ref double top)
+        private void AdjustSizeAndPositionForCanvas(ref double width, ref double height,
+            ref double left, ref double top, double centerX, double centerY)
         {
             if (!ClipElementsToCanvas)
                 return;
 
-            // First pass - check basic boundaries
-            bool leftBoundaryViolation = left < 0;
-            bool topBoundaryViolation = top < 0;
-            bool rightBoundaryViolation = left + width > CanvasWidth;
-            bool bottomBoundaryViolation = top + height > CanvasHeight;
+            // Safety check to ensure minimum size
+            width = Math.Max(width, 10);
+            height = Math.Max(height, 10);
 
-            // If there are boundary violations, we need to adjust
-            if (leftBoundaryViolation || topBoundaryViolation || rightBoundaryViolation || bottomBoundaryViolation)
+            // Step 1: Check if we need to adjust position to keep the element within the canvas
+            // Start with ensuring left position is valid
+            if (left < 0)
             {
-                // Calculate the maximum allowed size based on current position and canvas boundaries
-                double maxWidthFromLeft = CanvasWidth - left;
-                double maxHeightFromTop = CanvasHeight - top;
-                double maxWidthFromRight = left + width;
-                double maxHeightFromBottom = top + height;
+                left = 0;
+            }
 
-                // Find the most constraining dimension to maintain square aspect ratio
-                double maxSize = Math.Min(
-                    Math.Min(maxWidthFromLeft, maxHeightFromTop),
-                    Math.Min(maxWidthFromRight, maxHeightFromBottom)
-                );
+            // Ensure top position is valid
+            if (top < 0)
+            {
+                top = 0;
+            }
 
-                // Ensure minimum size
-                if (maxSize < 10)
-                {
-                    // If we can't fit a minimum sized square, adjust the position
-                    if (leftBoundaryViolation || rightBoundaryViolation)
-                    {
-                        // Adjust horizontal position
-                        if (left < 0)
-                            left = 0;
-                        else if (left + width > CanvasWidth)
-                            left = Math.Max(0, CanvasWidth - 10);
-                    }
+            // Step 2: Check if the element extends beyond the right or bottom edges
+            bool rightEdgeViolation = (left + width) > CanvasWidth;
+            bool bottomEdgeViolation = (top + height) > CanvasHeight;
 
-                    if (topBoundaryViolation || bottomBoundaryViolation)
-                    {
-                        // Adjust vertical position
-                        if (top < 0)
-                            top = 0;
-                        else if (top + height > CanvasHeight)
-                            top = Math.Max(0, CanvasHeight - 10);
-                    }
+            // Step 3: Calculate available space
+            double availableWidth = rightEdgeViolation ?
+                CanvasWidth - left : width;
+            double availableHeight = bottomEdgeViolation ?
+                CanvasHeight - top : height;
 
-                    // Set minimum size
-                    width = height = 10;
-                }
-                else
-                {
-                    // We can fit a square with at least the minimum size
-                    if (leftBoundaryViolation)
-                    {
-                        // Adjust left position to 0 and recalculate size
-                        left = 0;
-                        maxSize = Math.Min(CanvasWidth, CanvasHeight - top);
-                    }
+            // Step 4: Determine the maximum square size that fits, respecting the 10px minimum
+            double maxSquareSize = Math.Max(10, Math.Min(availableWidth, availableHeight));
 
-                    if (topBoundaryViolation)
-                    {
-                        // Adjust top position to 0 and recalculate size
-                        top = 0;
-                        maxSize = Math.Min(CanvasHeight, CanvasWidth - left);
-                    }
+            // Step 5: Adjust size if needed
+            if (width > maxSquareSize || height > maxSquareSize)
+            {
+                width = height = maxSquareSize;
 
-                    if (rightBoundaryViolation)
-                    {
-                        // Two options: reduce size or adjust position
-                        double adjustedSize = CanvasWidth - left;
-                        if (adjustedSize >= 10)
-                        {
-                            // Reduce size
-                            maxSize = Math.Min(maxSize, adjustedSize);
-                        }
-                        else
-                        {
-                            // Adjust position and size
-                            left = Math.Max(0, CanvasWidth - 10);
-                            maxSize = 10;
-                        }
-                    }
+                // Step 6: Recalculate position from center point to maintain centered scaling
+                double adjustedLeft = centerX - (width / 2);
+                double adjustedTop = centerY - (height / 2);
 
-                    if (bottomBoundaryViolation)
-                    {
-                        // Two options: reduce size or adjust position
-                        double adjustedSize = CanvasHeight - top;
-                        if (adjustedSize >= 10)
-                        {
-                            // Reduce size
-                            maxSize = Math.Min(maxSize, adjustedSize);
-                        }
-                        else
-                        {
-                            // Adjust position and size
-                            top = Math.Max(0, CanvasHeight - 10);
-                            maxSize = 10;
-                        }
-                    }
-
-                    // Set final size, ensuring it's at least the minimum size
-                    width = height = Math.Max(10, maxSize);
-                }
+                // Step 7: Ensure adjusted position doesn't cause canvas overflow
+                left = Math.Max(0, Math.Min(CanvasWidth - width, adjustedLeft));
+                top = Math.Max(0, Math.Min(CanvasHeight - height, adjustedTop));
             }
 
             // Final boundary check
-            left = Math.Max(0, Math.Min(CanvasWidth - width, left));
-            top = Math.Max(0, Math.Min(CanvasHeight - height, top));
+            if (left + width > CanvasWidth)
+            {
+                // If we're still over the edge, prioritize keeping the element within the canvas
+                // by adjusting both position and size as needed
+                if (width > CanvasWidth)
+                {
+                    // Element is wider than canvas, so set maximum size and position at left edge
+                    width = height = Math.Min(width, CanvasWidth);
+                    left = 0;
+                }
+                else
+                {
+                    // Move element back to stay within right boundary
+                    left = CanvasWidth - width;
+                }
+            }
+
+            if (top + height > CanvasHeight)
+            {
+                // Same logic for top/bottom
+                if (height > CanvasHeight)
+                {
+                    height = width = Math.Min(height, CanvasHeight);
+                    top = 0;
+                }
+                else
+                {
+                    top = CanvasHeight - height;
+                }
+            }
         }
 
         #endregion
