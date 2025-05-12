@@ -179,6 +179,102 @@ MyCanvas.ElementResized += (sender, e) => {
 - 간단한 그래픽 편집 도구
 - 게임 레벨 디자이너
 
+## 테스트 프로젝트 구조
+
+프로젝트의 품질과 신뢰성을 보장하기 위해 MSTest를 기반으로 하는 단위 테스트 프로젝트가 포함되어 있습니다.
+
+```
+DragDropClippedCanvas.Tests/
+├── Commands/
+│   └── RelayCommandTests.cs           # RelayCommand 테스트
+├── Controls/
+│   └── DraggableCanvasTests.cs        # DraggableCanvas 테스트
+├── ViewModels/
+│   ├── MainWindowViewModelTests.cs    # 메인 뷰모델 테스트
+│   └── ViewModelBaseTests.cs          # 기본 뷰모델 테스트
+└── TestUtilities/
+    ├── MockElement.cs                 # UIElement 모의 구현
+    ├── UIElementHelper.cs             # UI 요소 테스트 유틸리티
+    └── TestEventArgs.cs               # 이벤트 인자 생성 유틸리티
+```
+
+### 테스트 유틸리티 클래스
+
+#### MockElement
+
+테스트 목적으로 사용되는 UIElement의 모의 구현입니다. 마우스 이벤트 시뮬레이션, 크기 조정, 위치 지정 등의 기능을 제공합니다.
+
+```csharp
+// 마우스 이벤트 시뮬레이션 예시
+var mockElement = new MockElement(100, 100);
+var eventArgs = new MockMouseButtonEventArgs(new Point(50, 50));
+mockElement.RaiseMouseLeftButtonDown(eventArgs);
+```
+
+#### UIElementHelper
+
+Canvas와 UIElement 간의 상호작용을 테스트하기 위한 유틸리티 메서드를 제공합니다.
+
+```csharp
+// 테스트용 캔버스 생성
+var canvas = UIElementHelper.CreateCanvas(1024, 768);
+
+// 요소 위치 설정 및 확인
+UIElementHelper.SetCanvasLeft(element, 50);
+double left = UIElementHelper.GetCanvasLeft(element);
+```
+
+#### TestEventArgs
+
+DraggableCanvas의 다양한 이벤트에 사용되는 이벤트 인자 객체를 생성하는 유틸리티 클래스입니다.
+
+```csharp
+// 요소 드롭 이벤트 인자 생성
+var args = TestEventArgs.CreateElementDroppedEventArgs(element, new Point(50, 50));
+```
+
+### 주요 테스트 케이스
+
+#### RelayCommandTests
+
+RelayCommand 클래스의 기능을 검증하는 테스트입니다.
+
+- 명령 실행 기능
+- 매개변수 전달
+- 실행 조건 검사
+- 이벤트 발생 확인
+
+#### DraggableCanvasTests
+
+DraggableCanvas 컴포넌트의 핵심 기능을 검증하는 테스트입니다.
+
+- 요소 추가
+- 드래그 기능
+- 캔버스 초기화
+- 마우스 휠을 통한 크기 조절
+
+#### ViewModelTests
+
+ViewModel 클래스들의 기능을 검증하는 테스트입니다.
+
+- 속성 변경 통지
+- 데이터 바인딩
+- 명령 실행
+- 이벤트 발생
+
+### 테스트 실행 방법
+
+1. Visual Studio에서 테스트 탐색기 열기 (보기 -> 테스트 탐색기)
+2. 솔루션 빌드 (빌드 -> 솔루션 빌드)
+3. 테스트 탐색기에서 실행할 테스트 선택
+4. "선택한 테스트 실행" 또는 "모든 테스트 실행" 클릭
+
+또는 명령줄에서 다음과 같이 실행할 수 있습니다:
+
+```
+vstest.console.exe DragDropClippedCanvas.Tests.dll
+```
+
 ## 구현 세부 사항
 
 ### 주요 클래스
@@ -235,6 +331,19 @@ DragDropClippedCanvas/
 │   └── MainWindowViewModel.cs # 메인 화면 ViewModel
 ├── MainWindow.xaml            # 애플리케이션 메인 화면
 └── MainWindow.xaml.cs         # 메인 화면 코드
+
+DragDropClippedCanvas.Tests/
+├── Commands/
+│   └── RelayCommandTests.cs           # RelayCommand 테스트
+├── Controls/
+│   └── DraggableCanvasTests.cs        # DraggableCanvas 테스트
+├── ViewModels/
+│   ├── MainWindowViewModelTests.cs    # 메인 뷰모델 테스트
+│   └── ViewModelBaseTests.cs          # 기본 뷰모델 테스트
+└── TestUtilities/
+    ├── MockElement.cs                 # UIElement 모의 구현
+    ├── UIElementHelper.cs             # UI 요소 테스트 유틸리티
+    └── TestEventArgs.cs               # 이벤트 인자 생성 유틸리티
 ```
 
 ## 확장 가능성
@@ -254,4 +363,4 @@ DragDropClippedCanvas/
 
 ## 요약
 
-DragDropClippedCanvas는 WPF 애플리케이션에서 사용할 수 있는 강력하고 재사용 가능한 캔버스 컨트롤입니다. 드래그 앤 드롭, 크기 조절, 경계 제한 등 다양한 기능을 제공하며, MVVM 패턴을 준수하여 쉽게 통합할 수 있습니다. 다양한 사용 사례에 적용할 수 있으며, 확장 가능한, 유연한 아키텍처를 가지고 있습니다.
+DragDropClippedCanvas는 WPF 애플리케이션에서 사용할 수 있는 강력하고 재사용 가능한 캔버스 컨트롤입니다. 드래그 앤 드롭, 크기 조절, 경계 제한 등 다양한 기능을 제공하며, MVVM 패턴을 준수하여 쉽게 통합할 수 있습니다. 또한 MSTest 기반의 테스트 프로젝트를 통해 각 컴포넌트의 기능과 신뢰성이 검증되었습니다. 다양한 사용 사례에 적용할 수 있으며, 확장 가능한 유연한 아키텍처를 가지고 있습니다.
