@@ -6,23 +6,9 @@
         xmlns:local="clr-namespace:DragDropClippedCanvas"
         mc:Ignorable="d"
         Title="MainWindow"
-        Height="768"
-        Width="1024">
+        Height="450"
+        Width="800">
     <Grid>
-        <Canvas x:Name="MainCanvas"
-                Width="1024"
-                Height="768"
-                Background="LightGray">
-            <Rectangle x:Name="DraggableRectangle"
-                    Width="{Binding RectangleWidth}"
-                    Height="{Binding RectangleHeight}"
-                    Fill="Blue"
-                    Canvas.Left="{Binding RectangleLeft}"
-                    Canvas.Top="{Binding RectangleTop}"
-                    MouseWheel="DraggableRectangle_MouseWheel"
-                    MouseLeftButtonDown="DraggableRectangle_MouseLeftButtonDown"
-                    MouseMove="DraggableRectangle_MouseMove"
-                    MouseLeftButtonUp="DraggableRectangle_MouseLeftButtonUp"/>
-        </Canvas>
+
     </Grid>
 </Window>
