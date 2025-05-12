@@ -4,11 +4,62 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DragDropClippedCanvas"
+        xmlns:controls="clr-namespace:DragDropClippedCanvas.Controls"
+        xmlns:viewmodels="clr-namespace:DragDropClippedCanvas.ViewModels"
         mc:Ignorable="d"
-        Title="MainWindow"
-        Height="450"
-        Width="800">
-    <Grid>
+        Title="Draggable Canvas Demo"
+        Height="800"
+        Width="1200"
+        Loaded="Window_Loaded">
 
+    <Window.Resources>
+        <viewmodels:MainWindowViewModel x:Key="MainViewModel"/>
+    </Window.Resources>
+
+    <Grid DataContext="{StaticResource MainViewModel}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <ToolBar Grid.Row="0">
+            <Button Content="Add Rectangle"
+                    Command="{Binding AddSampleElementCommand}"/>
+            <Separator/>
+            <Button Content="Clear Canvas"
+                    Command="{Binding ClearCanvasCommand}"/>
+            <Separator/>
+            <TextBlock Text="Canvas Size: "
+                    VerticalAlignment="Center"/>
+            <TextBox Text="{Binding CanvasWidth, UpdateSourceTrigger=PropertyChanged}"
+                    Width="50"
+                    Margin="5,0"/>
+            <TextBlock Text="x"
+                    VerticalAlignment="Center"/>
+            <TextBox Text="{Binding CanvasHeight, UpdateSourceTrigger=PropertyChanged}"
+                    Width="50"
+                    Margin="5,0"/>
+        </ToolBar>
+
+        <!-- Draggable Canvas -->
+        <Border Grid.Row="1"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                Margin="10">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto">
+                <controls:DraggableCanvas x:Name="DraggableCanvas"
+                                          CanvasWidth="{Binding CanvasWidth}"
+                                          CanvasHeight="{Binding CanvasHeight}"
+                                          ClipElementsToCanvas="True"/>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="2">
+            <TextBlock Text="{Binding StatusMessage}"/>
+        </StatusBar>
     </Grid>
 </Window>
