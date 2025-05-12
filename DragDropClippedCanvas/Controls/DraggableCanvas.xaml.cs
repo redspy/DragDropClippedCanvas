@@ -178,22 +178,64 @@ namespace DragDropClippedCanvas.Controls
                 double left = Canvas.GetLeft(_hoveredElement);
                 double top = Canvas.GetTop(_hoveredElement);
 
+                // Calculate the center point of the element
+                double centerX = left + (currentWidth / 2);
+                double centerY = top + (currentHeight / 2);
+
+                // Calculate new position to maintain the center point
+                double newLeft = centerX - (newWidth / 2);
+                double newTop = centerY - (newHeight / 2);
+
                 // Ensure the element stays within canvas boundaries
                 if (ClipElementsToCanvas)
                 {
-                    if (left + newWidth > CanvasWidth)
+                    // Check if the new dimensions and position will fit within the canvas
+                    if (newLeft < 0)
                     {
-                        newWidth = CanvasWidth - left;
+                        newLeft = 0;
+                        // May need to adjust width to fit
+                        newWidth = Math.Min(newWidth, 2 * centerX);
                     }
-                    if (top + newHeight > CanvasHeight)
+
+                    if (newTop < 0)
                     {
-                        newHeight = CanvasHeight - top;
+                        newTop = 0;
+                        // May need to adjust height to fit
+                        newHeight = Math.Min(newHeight, 2 * centerY);
+                    }
+
+                    if (newLeft + newWidth > CanvasWidth)
+                    {
+                        // Adjust width first
+                        newWidth = CanvasWidth - newLeft;
+
+                        // If width is too small, adjust position and width
+                        if (newWidth < 10)
+                        {
+                            newWidth = 10;
+                            newLeft = Math.Max(0, CanvasWidth - newWidth);
+                        }
+                    }
+
+                    if (newTop + newHeight > CanvasHeight)
+                    {
+                        // Adjust height first
+                        newHeight = CanvasHeight - newTop;
+
+                        // If height is too small, adjust position and height
+                        if (newHeight < 10)
+                        {
+                            newHeight = 10;
+                            newTop = Math.Max(0, CanvasHeight - newHeight);
+                        }
                     }
                 }
 
-                // Update element size
+                // Update element size and position
                 frameworkElement.Width = newWidth;
                 frameworkElement.Height = newHeight;
+                Canvas.SetLeft(_hoveredElement, newLeft);
+                Canvas.SetTop(_hoveredElement, newTop);
 
                 // Raise the ElementResized event
                 ElementResized?.Invoke(this, new ElementResizedEventArgs
@@ -201,7 +243,7 @@ namespace DragDropClippedCanvas.Controls
                     Element = _hoveredElement,
                     Width = newWidth,
                     Height = newHeight,
-                    Position = new Point(left, top)
+                    Position = new Point(newLeft, newTop)
                 });
 
                 e.Handled = true;

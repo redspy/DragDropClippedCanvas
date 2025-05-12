@@ -32,15 +32,15 @@
                     Command="{Binding ClearCanvasCommand}"/>
             <Separator/>
             <TextBlock Text="Canvas Size: "
-                    VerticalAlignment="Center"/>
+                       VerticalAlignment="Center"/>
             <TextBox Text="{Binding CanvasWidth, UpdateSourceTrigger=PropertyChanged}"
-                    Width="50"
-                    Margin="5,0"/>
+                     Width="50"
+                     Margin="5,0"/>
             <TextBlock Text="x"
-                    VerticalAlignment="Center"/>
+                       VerticalAlignment="Center"/>
             <TextBox Text="{Binding CanvasHeight, UpdateSourceTrigger=PropertyChanged}"
-                    Width="50"
-                    Margin="5,0"/>
+                     Width="50"
+                     Margin="5,0"/>
         </ToolBar>
 
         <!-- Draggable Canvas -->
@@ -49,7 +49,7 @@
                 BorderThickness="1"
                 Margin="10">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                    VerticalScrollBarVisibility="Auto">
+                          VerticalScrollBarVisibility="Auto">
                 <controls:DraggableCanvas x:Name="DraggableCanvas"
                                           CanvasWidth="{Binding CanvasWidth}"
                                           CanvasHeight="{Binding CanvasHeight}"
