@@ -38,6 +38,9 @@ namespace DragDropClippedCanvas.Controls
         public static readonly DependencyProperty ClipElementsToCanvasProperty =
             DependencyProperty.Register("ClipElementsToCanvas", typeof(bool), typeof(DraggableCanvas), new PropertyMetadata(true));
 
+        public static readonly DependencyProperty MaintainSquareAspectRatioProperty =
+            DependencyProperty.Register("MaintainSquareAspectRatio", typeof(bool), typeof(DraggableCanvas), new PropertyMetadata(true));
+
         #endregion
 
         #region Public Properties
@@ -64,6 +67,12 @@ namespace DragDropClippedCanvas.Controls
         {
             get { return (bool)GetValue(ClipElementsToCanvasProperty); }
             set { SetValue(ClipElementsToCanvasProperty, value); }
+        }
+
+        public bool MaintainSquareAspectRatio
+        {
+            get { return (bool)GetValue(MaintainSquareAspectRatioProperty); }
+            set { SetValue(MaintainSquareAspectRatioProperty, value); }
         }
 
         #endregion
@@ -164,15 +173,6 @@ namespace DragDropClippedCanvas.Controls
 
                 // Calculate new size based on wheel delta
                 double delta = e.Delta > 0 ? 10 : -10;
-                double newWidth = Math.Max(10, currentWidth + delta);
-                double newHeight = Math.Max(10, currentHeight + delta);
-
-                // Limit maximum size increase to +100 from original size
-                if (frameworkElement.Tag is OriginalSize originalSize)
-                {
-                    newWidth = Math.Min(originalSize.Width + 100, Math.Max(10, newWidth));
-                    newHeight = Math.Min(originalSize.Height + 100, Math.Max(10, newHeight));
-                }
 
                 // Get current position
                 double left = Canvas.GetLeft(_hoveredElement);
@@ -182,54 +182,25 @@ namespace DragDropClippedCanvas.Controls
                 double centerX = left + (currentWidth / 2);
                 double centerY = top + (currentHeight / 2);
 
+                // If maintaining square aspect ratio, determine the size based on canvas constraints
+                double newSize = currentWidth + delta;
+
+                // Limit maximum size increase to +100 from original size
+                if (frameworkElement.Tag is OriginalSize originalSize)
+                {
+                    newSize = Math.Min(originalSize.Width + 100, Math.Max(10, newSize));
+                }
+
+                // Always use the same value for width and height to maintain square aspect ratio
+                double newWidth = newSize;
+                double newHeight = newSize;
+
                 // Calculate new position to maintain the center point
                 double newLeft = centerX - (newWidth / 2);
                 double newTop = centerY - (newHeight / 2);
 
-                // Ensure the element stays within canvas boundaries
-                if (ClipElementsToCanvas)
-                {
-                    // Check if the new dimensions and position will fit within the canvas
-                    if (newLeft < 0)
-                    {
-                        newLeft = 0;
-                        // May need to adjust width to fit
-                        newWidth = Math.Min(newWidth, 2 * centerX);
-                    }
-
-                    if (newTop < 0)
-                    {
-                        newTop = 0;
-                        // May need to adjust height to fit
-                        newHeight = Math.Min(newHeight, 2 * centerY);
-                    }
-
-                    if (newLeft + newWidth > CanvasWidth)
-                    {
-                        // Adjust width first
-                        newWidth = CanvasWidth - newLeft;
-
-                        // If width is too small, adjust position and width
-                        if (newWidth < 10)
-                        {
-                            newWidth = 10;
-                            newLeft = Math.Max(0, CanvasWidth - newWidth);
-                        }
-                    }
-
-                    if (newTop + newHeight > CanvasHeight)
-                    {
-                        // Adjust height first
-                        newHeight = CanvasHeight - newTop;
-
-                        // If height is too small, adjust position and height
-                        if (newHeight < 10)
-                        {
-                            newHeight = 10;
-                            newTop = Math.Max(0, CanvasHeight - newHeight);
-                        }
-                    }
-                }
+                // Check boundaries and adjust position and size if needed
+                AdjustSizeAndPositionForCanvas(ref newWidth, ref newHeight, ref newLeft, ref newTop);
 
                 // Update element size and position
                 frameworkElement.Width = newWidth;
@@ -248,6 +219,122 @@ namespace DragDropClippedCanvas.Controls
 
                 e.Handled = true;
             }
+        }
+
+        /// <summary>
+        /// Adjusts the size and position of an element to ensure it stays within canvas boundaries
+        /// while maintaining square aspect ratio
+        /// </summary>
+        private void AdjustSizeAndPositionForCanvas(ref double width, ref double height, ref double left, ref double top)
+        {
+            if (!ClipElementsToCanvas)
+                return;
+
+            // First pass - check basic boundaries
+            bool leftBoundaryViolation = left < 0;
+            bool topBoundaryViolation = top < 0;
+            bool rightBoundaryViolation = left + width > CanvasWidth;
+            bool bottomBoundaryViolation = top + height > CanvasHeight;
+
+            // If there are boundary violations, we need to adjust
+            if (leftBoundaryViolation || topBoundaryViolation || rightBoundaryViolation || bottomBoundaryViolation)
+            {
+                // Calculate the maximum allowed size based on current position and canvas boundaries
+                double maxWidthFromLeft = CanvasWidth - left;
+                double maxHeightFromTop = CanvasHeight - top;
+                double maxWidthFromRight = left + width;
+                double maxHeightFromBottom = top + height;
+
+                // Find the most constraining dimension to maintain square aspect ratio
+                double maxSize = Math.Min(
+                    Math.Min(maxWidthFromLeft, maxHeightFromTop),
+                    Math.Min(maxWidthFromRight, maxHeightFromBottom)
+                );
+
+                // Ensure minimum size
+                if (maxSize < 10)
+                {
+                    // If we can't fit a minimum sized square, adjust the position
+                    if (leftBoundaryViolation || rightBoundaryViolation)
+                    {
+                        // Adjust horizontal position
+                        if (left < 0)
+                            left = 0;
+                        else if (left + width > CanvasWidth)
+                            left = Math.Max(0, CanvasWidth - 10);
+                    }
+
+                    if (topBoundaryViolation || bottomBoundaryViolation)
+                    {
+                        // Adjust vertical position
+                        if (top < 0)
+                            top = 0;
+                        else if (top + height > CanvasHeight)
+                            top = Math.Max(0, CanvasHeight - 10);
+                    }
+
+                    // Set minimum size
+                    width = height = 10;
+                }
+                else
+                {
+                    // We can fit a square with at least the minimum size
+                    if (leftBoundaryViolation)
+                    {
+                        // Adjust left position to 0 and recalculate size
+                        left = 0;
+                        maxSize = Math.Min(CanvasWidth, CanvasHeight - top);
+                    }
+
+                    if (topBoundaryViolation)
+                    {
+                        // Adjust top position to 0 and recalculate size
+                        top = 0;
+                        maxSize = Math.Min(CanvasHeight, CanvasWidth - left);
+                    }
+
+                    if (rightBoundaryViolation)
+                    {
+                        // Two options: reduce size or adjust position
+                        double adjustedSize = CanvasWidth - left;
+                        if (adjustedSize >= 10)
+                        {
+                            // Reduce size
+                            maxSize = Math.Min(maxSize, adjustedSize);
+                        }
+                        else
+                        {
+                            // Adjust position and size
+                            left = Math.Max(0, CanvasWidth - 10);
+                            maxSize = 10;
+                        }
+                    }
+
+                    if (bottomBoundaryViolation)
+                    {
+                        // Two options: reduce size or adjust position
+                        double adjustedSize = CanvasHeight - top;
+                        if (adjustedSize >= 10)
+                        {
+                            // Reduce size
+                            maxSize = Math.Min(maxSize, adjustedSize);
+                        }
+                        else
+                        {
+                            // Adjust position and size
+                            top = Math.Max(0, CanvasHeight - 10);
+                            maxSize = 10;
+                        }
+                    }
+
+                    // Set final size, ensuring it's at least the minimum size
+                    width = height = Math.Max(10, maxSize);
+                }
+            }
+
+            // Final boundary check
+            left = Math.Max(0, Math.Min(CanvasWidth - width, left));
+            top = Math.Max(0, Math.Min(CanvasHeight - height, top));
         }
 
         #endregion
